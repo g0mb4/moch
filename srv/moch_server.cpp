@@ -268,7 +268,7 @@ void MOCH_Server::_connection_handler(int client_sock, struct sockaddr_in client
 			/* regular message */
 			case MOCH_TYPE_MSG:
 				/* if client is logged in */
-				if(_is_client_online(own_id))
+				if(_is_client_online(own_id)) {
 					pthread_t id;
 					/* if client is online */
 					if(_get_id_from_nick(msg.to, &id)){
@@ -288,7 +288,7 @@ void MOCH_Server::_connection_handler(int client_sock, struct sockaddr_in client
 						write(sock, &msg , sizeof(Message));	// send back the bad news immediately
 					}
 				/* if not */
-				} else{
+				} else {
 					msg.type = MOCH_TYPE_ERROR;
 					msg.time = time(NULL);
 					strcpy(msg.message, "Client is not logged in!");

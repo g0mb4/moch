@@ -40,12 +40,10 @@ public:
         Log(std::string fname, unsigned int level, bool terminal = false);
         ~Log(void);
 
-        void write(char level, char *msg);
-        void write(char level, std::string msg);
+        void write(const char level, const char *msg);
+        void writef(const char level, const char *fmt, ...);
 
-        void write_con(char level, std::string msg);
-
-        void writef(char level, char *fmt, ...);
+        void write_con(const char level, const char *msg);
 
         bool is_open(void) const;
         int get_err_num(void) const;

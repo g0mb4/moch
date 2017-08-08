@@ -38,7 +38,7 @@ Log::~Log(void)
  *  arg1: level
  *  arg2: text (char*)
  */
-void Log::write(char level, char *msg)
+void Log::write(const char level, const char *msg)
 {
     /* if level is avaliable */
     if(level & _log_level && _is_open){
@@ -84,20 +84,11 @@ void Log::write(char level, char *msg)
     }
 }
 
-/* Write a log entry
- *  arg1: level
- *  arg2: text (std::string)
- */
-void Log::write(char level, std::string msg)
-{
-	write(level, msg.c_str());	// már megírt fv meghívása
-}
-
 /* Write a log entry to the console
  *  arg1: level
  *  arg2: text (std::string)
  */
-void Log::write_con(char level, std::string msg)
+void Log::write_con(const char level, const char *msg)
 {
 	 if((level & _log_level) && _show_terminal){
 		time_t t = time(NULL);
@@ -115,9 +106,6 @@ void Log::write_con(char level, std::string msg)
 			case LOG_INFO :
 				strcpy(lvl, "INFO");
 				break;
-			case LOG_DISPLAY :
-				strcpy(lvl, "DISPLAY");
-				break;
 			default:
 				strcpy(lvl, "DAFUQ");
 		}
@@ -126,7 +114,7 @@ void Log::write_con(char level, std::string msg)
 
 		sprintf(log_msg, "%04d-%02d-%02dT%02d:%02d:%02d [%s] %s\n", tm.tm_year + 1900, tm.tm_mon + 1,
 				tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
-				lvl, msg.c_str());
+				lvl, msg);
 
 		printf("%s", log_msg);
 	 }
@@ -137,7 +125,7 @@ void Log::write_con(char level, std::string msg)
  *  arg2: foramt text (char*)
  *  argn: values
  */
-void Log::writef(char level, char *fmt, ...)
+void Log::writef(const char level, const char *fmt, ...)
 {
     char log_msg[MSG_SIZE];         // string for the text
 

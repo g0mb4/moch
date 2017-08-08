@@ -22,6 +22,7 @@
 
 typedef struct Conversation {
 	char nick_name[MOCH_NICK_LENGTH + 1];
+	bool is_new_msg;
 	std::vector<std::string> messages;
 } Conversation;
 
@@ -50,6 +51,7 @@ private:
 	void _redraw(void);
 	void _refresh(void);
 	void _clear(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+	void _clear_conv(uint32_t win_h);
 
 	bool _is_ch_out(int32_t ch);
 

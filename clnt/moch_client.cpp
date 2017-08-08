@@ -32,6 +32,8 @@ MOCH_Client::MOCH_Client(char *addr, short port, char *nick_name)
 	m.type = MOCH_TYPE_ITSME;
 	strcpy(m.to, nick_name);
 
+	_nick_name = std::string(nick_name);
+
 	if(!send_message(m)){
 		_err_num = 4;
 		return;
@@ -60,8 +62,9 @@ void MOCH_Client::_connection_handler(void)
 	{
 		memset(&msg, 0, sizeof(Message));
 		if(recv(_socket_fd, &msg, sizeof(Message), 0) < 0){
-			// failed
-       		} else {
+			_running = false;
+			break;
+       	} else {
 			pthread_mutex_lock(&_message_mutex);
 			_message_que.push_back(msg);
 			pthread_mutex_unlock(&_message_mutex);

@@ -1,6 +1,13 @@
+/* moch_server.h
+ *
+ * Server class for the MOCH protocol
+ *
+ * 2017, gmb */
+
 #ifndef __MOCH_SERVER_H__
 #define __MOCH_SERVER_H__
 
+/* used headers */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -21,10 +28,12 @@
 
 #define MSLEEP( x )		usleep(x * 1000)
 
+/* version of the server */
 #define MOCH_VER_MAJOR	1
 #define MOCH_VER_MINOR	0
 
-#define MOCH_SRV_ID	1
+/* thread id of the server (it can't be this low by thread creation) */
+#define MOCH_SRV_ID		1
 
 class MOCH_Server {
 
@@ -51,7 +60,7 @@ private:
 	int _socket_fd, _client_sock, _client_len;
 	struct sockaddr_in _server, _client;
 
-	std::vector<Message_Que_Data> _message_que;
+	std::vector<Message_Queue_Data> _message_queue;
 	pthread_mutex_t _message_mutex;
 
 	std::vector<Client_Data> _client_data;

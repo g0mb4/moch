@@ -15,10 +15,6 @@ MOCH_Client_TUI::MOCH_Client_TUI(MOCH_Client *clnt)
 		return;
 	}
 
-	//start_color();
-
-	//assume_default_colors(COLOR_RED, COLOR_BLUE);
-
 	_cury = _maxy;
 	_curx = 0;
 
@@ -28,6 +24,7 @@ MOCH_Client_TUI::MOCH_Client_TUI(MOCH_Client *clnt)
 	keypad(_main_win, TRUE);
 
 	Conversation c;
+	memset(c.nick_name, MOCH_NICK_LENGTH + 1, 0);
 	strcpy(c.nick_name, MOCH_SRV_NICK);
 	_convs.push_back(c);
 
@@ -94,7 +91,7 @@ void MOCH_Client_TUI::_redraw(void)
 	_type_win_w = _maxx;
 
 	_msg_win_w = _maxx - 13;
-	_msg_win_h = _maxy - 3;
+	_msg_win_h = _maxy - 2;
 
 	_clients_win_x = _msg_win_w + 2;
  	_clients_win_w = 12;
@@ -116,11 +113,11 @@ void MOCH_Client_TUI::_redraw(void)
 	}
 
 	for(int32_t i = 0; i < _maxx; i++){
-		move(_msg_win_h + 1, i);
+		move(_msg_win_h, i);
 		addch('-');
 	}
 
-	for(uint32_t i = 0; i < _msg_win_h + 1; i++){
+	for(uint32_t i = 0; i < _msg_win_h; i++){
 		move(i, _msg_win_w);
 		addch('|');
 	}
@@ -240,6 +237,12 @@ void MOCH_Client_TUI::_keyboard_handler(void)
 
 void MOCH_Client_TUI::_refresh(void)
 {
+	if(_clnt->is_running() == false){
+		stop();
+		_err_num = 10;
+		return;
+	}
+
 	std::vector<Message> messages;
 	_clnt->get_messages(messages);
 	while(!messages.empty()){
@@ -254,6 +257,7 @@ void MOCH_Client_TUI::_refresh(void)
 		_active_conv = 0;
 
 	_clear(0, 0, _msg_win_w, _msg_win_h);
+	_clear_conv(_msg_win_h);
 	uint32_t pos = 0;
 	for(i = 0; i < _convs[_active_conv].messages.size(); i++){
 		std::string msg = _convs[_active_conv].messages[i];
@@ -267,8 +271,17 @@ void MOCH_Client_TUI::_refresh(void)
 	for(i = 0; i < _convs.size(); i++){
 		if(i == _active_conv){
 			attron(A_REVERSE);
+			_convs[i].is_new_msg = false;
 		}
-		_mvprints(&i, _clients_win_x, _clients_win_w, std::string(_convs[i].nick_name));
+
+		std::string nick;
+		if(_convs[i].is_new_msg){
+			nick = std::string(_convs[i].nick_name, strlen(_convs[i].nick_name)) + "+";
+		} else {
+			nick = std::string(_convs[i].nick_name, strlen(_convs[i].nick_name));
+		}
+
+		_mvprints(&i, _clients_win_x, _clients_win_w, nick);
 
 		if(i == _active_conv){
 			attroff(A_REVERSE);
@@ -277,6 +290,19 @@ void MOCH_Client_TUI::_refresh(void)
 
 	move(_cury, _curx);
 	refresh();
+}
+
+void MOCH_Client_TUI::_clear_conv(uint32_t win_h)
+{
+	uint32_t pos = 0;
+	for(uint32_t i = 0; i < _convs[_active_conv].messages.size(); i++){
+		std::string s = _convs[_active_conv].messages[i];
+		pos += std::count(s.begin(), s.end(), '\n');
+		pos++;
+		if(pos > win_h){
+			_convs[_active_conv].messages.erase(_convs[_active_conv].messages.begin());
+		}
+	}
 }
 
 void MOCH_Client_TUI::_add_conv_message(Message m)
@@ -291,16 +317,16 @@ void MOCH_Client_TUI::_add_conv_message(Message m)
 
 	if(m.type == MOCH_TYPE_ERROR){
 		ss << "ERROR: ";
+	} else {
+		if(strcmp(m.to, MOCH_SRV_NICK) != 0){
+			ss << std::string(msg_time, strlen(msg_time));
+			ss << " ";
+			ss << std::string(m.to, strlen(m.to));
+			ss << ": ";
+		}
 	}
 
-	if(strcmp(m.to, MOCH_SRV_NICK) != 0){
-		ss << std::string(msg_time);
-		ss << " ";
-		ss << std::string(m.to);
-		ss << ": ";
-	}
-
-	ss << std::string(m.message);
+	ss << std::string(m.message, strlen(m.message));
 
 	if(m.type == MOCH_TYPE_ERROR){
 		_convs[_active_conv].messages.push_back(ss.str());
@@ -309,13 +335,16 @@ void MOCH_Client_TUI::_add_conv_message(Message m)
 			if(strcmp(_convs[i].nick_name, m.to) == 0){
 				found = true;
 				_convs[i].messages.push_back(ss.str());
+				_convs[i].is_new_msg = true;
 				break;
 			}
 		}
 
 		if(found == false){
 			Conversation c;
+			memset(c.nick_name, MOCH_NICK_LENGTH + 1, 0);
 			strcpy(c.nick_name, m.to);
+			c.is_new_msg = true;
 			c.messages.push_back(ss.str());
 			_convs.push_back(c);
 		}
@@ -350,7 +379,22 @@ void MOCH_Client_TUI::_parse_message(void)
 		}
 	}
 
-	_clnt->send_message(m);
+	if(_clnt->send_message(m)){
+		if(m.type == MOCH_TYPE_MSG && _active_conv > 0){
+			struct tm tm = *localtime(&m.time);
+			char msg_time[32];
+			sprintf(msg_time, "[%02d:%02d:%02d]", tm.tm_hour, tm.tm_min, tm.tm_sec);
+			std::stringstream ss;
+			ss << std::string(msg_time);
+			ss << " ";
+			ss << _clnt->get_nick_name();
+			ss << ": ";
+			ss << std::string(m.message);
+			_convs[_active_conv].messages.push_back(ss.str());
+		}
+	} else {
+		_convs[_active_conv].messages.push_back(std::string("ERROR: Unable to send the message!"));
+	}
 }
 
 void MOCH_Client_TUI::_parse_command(std::string command, char *cmd, char *arg)
@@ -404,10 +448,10 @@ void MOCH_Client_TUI::_client_command(char *cmd, char *arg)
 			_convs.erase(_convs.begin() + _active_conv);
 		}
 	} else if(strcmp(cmd, "help") == 0){
-		std::string msg = "/exit - Exits the program\n/redraw - Redraws the interface\n/chat nick_name - Starts a conversation\n/clear - Clears the active conversation\n/leave - Close the active conversation";
+		std::string msg = "/exit - Exits the program\n/redraw - Redraws the interface\n/chat nick_name - Starts a conversation\n/clear - Clears the active conversation\n/leave - Close the active conversation\n<TAB> - Switch conversation";
 		_convs[_active_conv].messages.push_back(msg);
 	} else {
-		std::string msg = "ERROR: Unkonwn command!";
+		std::string msg = "ERROR: Unknown command!";
 		_convs[_active_conv].messages.push_back(msg);
 	}
 }

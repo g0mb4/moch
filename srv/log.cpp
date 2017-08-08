@@ -1,62 +1,54 @@
 #include "log.h"
 
-/* Konstruktor
- *  arg1: naplófájl elérési útja és neve
- *  arg2: naplózási szint
- *  arg3: naplózás látszódjon az alapértlemezett kimeneten?
+/* Constructor
+ *  arg1: path of the logfile
+ *  arg2: level of the logging
+ *  arg3: is stdout active?
  */
 Log::Log(std::string fname, unsigned int level, bool terminal)
 {
-    _fp = NULL;      // fájlmutató beállítása NULL értékre ,hibakeresés miatt
+    _fp = NULL;      // init file pointer to 0, for debugging
 
     _err_num = LOG_SUCCESS;
 
-    /* naplófájl megnyitása, csak írásra */
+    /* open file, write + append */
     if((_fp = fopen(fname.c_str(), "a")) == NULL){
+    	/* failed */
     	_err_num = LOG_EOPEN;
-        _is_open = false;    // nem sikerült, ezt eltároljuk a változóban
+        _is_open = false;
     } else
-        _is_open = true;     // sikerült, így ezt tároljuk el
+        _is_open = true;
 
-    /* tagváltozók beállítása */
+    /* set up member variables */
     _log_level = level;
     _show_terminal = terminal;
 }
 
-/* Üres kosntruktor, háthakell
- */
-Log::Log(void){
-	 _fp = NULL;
-	 _err_num = LOG_SUCCESS;
-	 _log_level = LOG_NONE;
-	 _show_terminal = false;
-}
-
-/* Destruktor
+/* Destructor
  */
 Log::~Log(void)
 {
-    /* ha a naplófájl meg van nyitva */
+    /* hif file is open */
     if(_is_open || _fp != NULL){
-        fclose(_fp); // bezárjuk
+        fclose(_fp); // close it
     }
 }
 
-/* Egy naplóbejegyzés beírása
- *  arg1: naplóbejegyzés szintje
- *  arg2: naplóbejegyzés szövege
+/* Write a log entry
+ *  arg1: level
+ *  arg2: text (char*)
  */
 void Log::write(char level, char *msg)
 {
-    /* ha a beállított szint megegyezik az üzenet szintjével és a fájl nyitva van, akkor naplózunk */
+    /* if level is avaliable */
     if(level & _log_level && _is_open){
     	 _err_num = LOG_SUCCESS;
-        time_t t = time(NULL);          // aktuális idõ lekérdezése
-        struct tm tm = *localtime(&t);  // idõ struktúrába helyezése
+        time_t t = time(NULL);          // get time
+        struct tm tm = *localtime(&t);  // get time for humans
 
-        char lvl[10];   // üzenet szintjét jelzõ karakterlánc léterhozása
+        char lvl[10];   // level as a string
 
-        /* üzenet szintjét jelzõ karakterlánc értékének beállítása */
+        /* set the level */
         switch(level){
         	case LOG_ERROR :
         		strcpy(lvl, "ERROR");
@@ -67,56 +59,52 @@ void Log::write(char level, char *msg)
         	case LOG_INFO :
         		strcpy(lvl, "INFO");
         		break;
-        	case LOG_DISPLAY :
-        		strcpy(lvl, "DISPLAY");
-        		break;
         	default:
         		strcpy(lvl, "DAFUQ");
         }
 
-        char log_msg[MSG_SIZE]; // naplóbejegyzés lefoglalása
+        char log_msg[MSG_SIZE]; 	// string for the text
 
-        /* naplóbejegyzés feltöltése adatokkal */
+        /* create entry */
         sprintf(log_msg, "%04d-%02d-%02dT%02d:%02d:%02d [%s] %s\n", tm.tm_year + 1900, tm.tm_mon + 1,
                  tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
                  lvl, msg);
 
-        /* naplóbejegyzés fájlba írása*/
+        /* write the entry to the file */
         if(fprintf(_fp, "%s", log_msg) != (int32_t)strlen(msg)){
         	_err_num = LOG_EWRITE;
         }
 
-        fflush(_fp); // tartalom azonnali fájlba írása (így nem csak a program végén kerülnek be az adatok)
+        fflush(_fp); 	// immediately write buffer to the file (no waiting for the application to close)
 
-        /* ha be van állítva hogy a kimeneten is megjelenjen a bejegyzés */
+        /* if stdout is active */
         if(_show_terminal){
-            printf("%s", log_msg);  // akkor megjelenik
+            printf("%s", log_msg);  // write the entry to te console
         }
     }
 }
 
-/* Egy naplóbejegyzés beírása
- *  arg1: naplóbejegyzés szintje
- *  arg2: naplóbejegyzés szövege (std::string)
+/* Write a log entry
+ *  arg1: level
+ *  arg2: text (std::string)
  */
 void Log::write(char level, std::string msg)
 {
 	write(level, msg.c_str());	// már megírt fv meghívása
 }
 
-/* Egy naplóbejegyzés kiírása a konzolra (fájlba NEM kerül)
- *  arg1: naplóbejegyzés szintje
- *  arg2: naplóbejegyzés szövege (std::string)
+/* Write a log entry to the console
+ *  arg1: level
+ *  arg2: text (std::string)
  */
 void Log::write_con(char level, std::string msg)
 {
 	 if((level & _log_level) && _show_terminal){
-		time_t t = time(NULL);          // aktuális idõ lekérdezése
-		struct tm tm = *localtime(&t);  // idõ struktúrába helyezése
+		time_t t = time(NULL);
+		struct tm tm = *localtime(&t);
 
-		char lvl[10];   // üzenet szintjét jelzõ karakterlánc léterhozása
+		char lvl[10];
 
-		/* üzenet szintjét jelzõ karakterlánc értékének beállítása */
 		switch(level){
 			case LOG_ERROR :
 				strcpy(lvl, "ERROR");
@@ -134,9 +122,8 @@ void Log::write_con(char level, std::string msg)
 				strcpy(lvl, "DAFUQ");
 		}
 
-		char log_msg[MSG_SIZE]; // naplóbejegyzés lefoglalása
+		char log_msg[MSG_SIZE];
 
-		/* naplóbejegyzés feltöltése adatokkal */
 		sprintf(log_msg, "%04d-%02d-%02dT%02d:%02d:%02d [%s] %s\n", tm.tm_year + 1900, tm.tm_mon + 1,
 				tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
 				lvl, msg.c_str());
@@ -145,34 +132,34 @@ void Log::write_con(char level, std::string msg)
 	 }
 }
 
-/* Egy naplóbejegyzés formázott beírása
- *  arg1: naplóbejegyzés szintje
- *  arg2: naplóbejegyzés szövege
- *  argn: formátum paraméterek
+/* Write a log entry in a formatted way
+ *  arg1: level
+ *  arg2: foramt text (char*)
+ *  argn: values
  */
 void Log::writef(char level, char *fmt, ...)
 {
-    char log_msg[MSG_SIZE];         // naplóbejegyzés szövege
+    char log_msg[MSG_SIZE];         // string for the text
 
-    va_list arglist;                // argumentumlista létrehozása
+    va_list arglist;                // set up argumentum list
 
-    va_start(arglist, fmt);         // argumentumlista értékeinek beolvasása a szöveg alapján
-    vsprintf(log_msg, fmt, arglist);    // argumentumlista behelyettesítése és a bufferbe helyezése
-    va_end(arglist);                // lista lezárása
+    va_start(arglist, fmt);         	// get the values from the arg list
+    vsprintf(log_msg, fmt, arglist);    // substutite the values
+    va_end(arglist);                	// destroy the list
 
-    write(level, log_msg);          // a már szépen mûködõ fv. meghívása, így már tudja kezelni
+    write(level, log_msg);          // write the text to the file
 }
 
-/* Naplófájl meg van e nyitva?
+/* Is file open?
  */
 bool Log::is_open(void) const
 {
-    return _is_open;     // ebbõl kiderül
+    return _is_open;     // yes/no
 }
 
-/* Mi volt a hiba?
+/* Get the error number
  */
 int Log::get_err_num(void) const
 {
-	return _err_num;	// ez
+	return _err_num;
 }

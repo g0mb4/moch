@@ -43,17 +43,13 @@ int main(int argc, char **argv){
 
 	MOCH_Client_TUI tui(&clnt);
 	if(tui.get_err_num() != 0){
-		fprintf(stderr, "unale to init TUI (%d)\n", tui.get_err_num());
 		return_number = 2;
-		exit(return_number);
 	}
 
 	tui.start();
 
 	if(tui.get_err_num() != 0){
-		fprintf(stderr, "unale to start TUI (%d)\n", tui.get_err_num());
 		return_number = 3;
-		exit(return_number);
 	}
 
 	if(return_number == 0){
@@ -63,6 +59,16 @@ int main(int argc, char **argv){
 	}
 
 	tui.stop();
+
+	if(return_number == 2){
+		fprintf(stderr, "unale to init TUI (%d)\n", tui.get_err_num());
+	} else if(return_number == 3){
+		fprintf(stderr, "unale to start TUI (%d)\n", tui.get_err_num());
+	}
+
+	if(tui.get_err_num() == 10){
+		fprintf(stderr, "server disconnected\n");
+	}
 
 	exit(return_number);
 }

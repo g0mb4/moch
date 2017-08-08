@@ -1,3 +1,9 @@
+/* log.h
+ *
+ * General logging class
+ *
+ * 2017, gmb */
+
 #ifndef __LOG_H__
 #define __LOG_H__
 
@@ -8,17 +14,18 @@
 #include <inttypes.h>
 #include <string>
 
+/* log levels */
 #define LOG_NONE    	0
 #define LOG_ERROR   	1
 #define LOG_WARNING 	2
 #define LOG_INFO    	4
-#define LOG_DISPLAY 	8
 
+/* errors */
 #define LOG_SUCCESS		0
 #define LOG_EOPEN		1
 #define LOG_EWRITE		2
 
-#define MSG_SIZE    	1024
+#define MSG_SIZE    	1024	// maximal size of a log message
 
 class Log {
 
@@ -30,7 +37,6 @@ private:
         int _err_num;
 
 public:
-        Log(void);
         Log(std::string fname, unsigned int level, bool terminal = false);
         ~Log(void);
 

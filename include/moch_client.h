@@ -27,6 +27,9 @@ public:
 
 	void get_messages(std::vector<Message> &messages);
 
+	std::string get_nick_name(void) { return _nick_name; };
+	bool is_running(void) { return _running.load(); };
+
 private:
 	int _err_num;
 
